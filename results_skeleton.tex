@@ -1,0 +1,209 @@
+\chapter{Results}
+\label{ch:results}
+
+% Every number in this file was computed from the notebook (blocks 1-16) on:
+%   - 0day _In the Wild_.xlsx, sheet "All"
+%   - reserved_dates.csv (CVE List, pulled 8 October 2026)
+%   - cvss_scores.csv (NVD via the fkie-cad mirror, pulled 8 October 2026)
+% Two latency measures are shown side by side:
+%   discovery-to-patch   = Date Patched - Date Discovered   (n = 132)
+%   reservation-to-patch = Date Patched - CVE dateReserved  (n = 403)
+% Which one is the headline is still to be agreed with the supervisor.
+% Lines starting with "% ->" are the facts each paragraph has to state. Write the sentences yourself.
+
+\section{Data Overview}
+% -> 410 CVEs in the snapshot after cleaning
+% -> discovery date known for 133 (32.4%); 132 of those also have a patch date (CVE-2024-7262 has none)
+% -> reserved date found for all 410; 403 give a usable latency
+%    (6 dropped because the ID was reserved after the patch date, 1 has no patch date)
+% -> 18 CVEs have a reservation-to-patch latency of 0 (ID reserved on the patch day)
+% -> medians: 9 days (discovery) vs 56 days (reservation); refer to the table
+% -> both are right-skewed (mean 34.2 vs median 9; mean 80.7 vs median 56), so medians are reported throughout
+
+\begin{table}[h]
+    \centering
+    \caption{Patch latency in days under both measures.}
+    \label{tab:descriptives}
+    \begin{tabular}{lrr}
+        \toprule
+        Statistic & Discovery-to-patch & Reservation-to-patch \\
+        \midrule
+        Observations             & 132 & 403 \\
+        Median                   & 9 & 56 \\
+        Interquartile range      & 3 -- 30.2 & 23.5 -- 114.5 \\
+        90th percentile          & 85.5 & 186 \\
+        Minimum                  & 1 & 0 \\
+        Maximum                  & 834 & 426 \\
+        Mean                     & 34.2 & 80.7 \\
+        Patched within 7 days    & 48.5\% & 12.9\% \\
+        Patched within 30 days   & 75.0\% & 28.5\% \\
+        Patched within 90 days   & 90.2\% & 66.3\% \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{Proxy Validation}
+% -> 133 CVEs have both a discovery and a reserved date
+% -> mean absolute difference 55.7 days, standard deviation 88.3 days
+% -> Spearman between the two dates: rho = 0.994 (high by construction: the dates span ten years)
+% -> Spearman between the two latencies: rho = 0.438, p < 0.001, n = 132 (this is the one that matters)
+% -> on those 132 CVEs the median latency is 9 days by discovery date and 57 by reserved date
+% -> the ID was reserved before discovery in 83 cases (62%), on the same day in 1, after in 49
+% -> median lead of reservation over discovery differs by vendor:
+%    Microsoft 79 days, Adobe 31, Google 6, Apple 6
+% -> and by period: 54 days up to 2021 (n = 90), -2 days from 2022 (n = 40);
+%    from 2022, 75% are within a week of discovery
+% -> consequence: the proxy adds a lead time that varies by vendor and by year, so it is not neutral for RQ1 and RQ2
+
+\section{Normality}
+% -> Shapiro-Wilk rejects normality for both measures (p < 0.001)
+%    discovery: W = 0.371, skewness 7.38; reservation: W = 0.855, skewness 1.50
+% -> consequence: all tests below are the non-parametric ones named in the methodology
+% Two or three sentences.
+
+\section{Patch Latency over Time (RQ1)}
+% -> discovery measure (2015--2024): Spearman rho = -0.043, p = 0.628; Kendall tau = -0.026, p = 0.680. No trend.
+%    yearly medians range from 3 (2022) to 37.5 (2024) with no direction
+% -> reservation measure (2013--2026): Spearman rho = -0.440, p < 0.001; Kendall tau = -0.312, p < 0.001. Apparent decline.
+% -> check on the 130 CVEs that have both measures, same year variable:
+%    reservation-to-patch vs year: rho = -0.422, p < 0.001
+%    discovery-to-patch vs year:   rho = 0.003, p = 0.969
+%    reservation lead vs year:     rho = -0.552, p < 0.001
+% -> so the decline comes from IDs being reserved closer to discovery in recent years, not from faster patching
+% -> the hypothesis that latency increases with year is not supported under either measure
+% -> caveats: few discovery-dated cases in 2017-2019; reservations from 2026 are cut short by the snapshot (median 3 (n = 14))
+
+\begin{figure}[h]
+    \centering
+    % \includegraphics[width=0.48\textwidth]{figures/median_latency_per_year.png}
+    % \includegraphics[width=0.48\textwidth]{figures/median_latency_per_year_reserved.png}
+    \caption{Median patch latency per year, by discovery date (left) and by CVE reservation date (right).}
+    \label{fig:latency-per-year}
+\end{figure}
+
+\section{Patch Latency across Vendors (RQ2)}
+% -> Kruskal-Wallis across the four vendors:
+%    discovery:   H = 36.68, p < 0.001 (n = 102)
+%    reservation: H = 29.65, p < 0.001 (n = 337)
+% -> robustness check, reservations from 2022 only, three vendors (Adobe has 2 cases):
+%    H = 30.64, p < 0.001 (n = 157); medians Microsoft 42 (n = 65), Google 1 (n = 50), Apple 40 (n = 42)
+% -> holds in all three views: vendors differ overall, and Google is faster than Microsoft
+% -> does not hold across views: Apple's position; Adobe cannot be placed (mostly older cases)
+% -> this is heterogeneity, not a ranking: vendor is confounded with product mix, release cadence and period
+
+\begin{table}[h]
+    \centering
+    \caption{Patch latency in days per vendor under both measures.}
+    \label{tab:vendors}
+    \small
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{lrrrrrrrr}
+        \toprule
+        & \multicolumn{4}{c}{Discovery} & \multicolumn{4}{c}{Reservation} \\
+        \cmidrule(lr){2-5} \cmidrule(lr){6-9}
+        Vendor & $n$ & Median & IQR & Range & $n$ & Median & IQR & Range \\
+        \midrule
+        Google    & 53 & 4 & 2 -- 6 & 1 -- 132 & 79 & 45 & 1 -- 92 & 0 -- 426 \\
+        Adobe     & 14 & 6 & 4.2 -- 8.5 & 1 -- 29 & 28 & 52.5 & 17.2 -- 95 & 5 -- 235 \\
+        Apple     & 10 & 9.5 & 9 -- 10 & 6 -- 10 & 64 & 46.5 & 15.8 -- 91 & 4 -- 244 \\
+        Microsoft & 25 & 24 & 15 -- 48 & 5 -- 182 & 166 & 62 & 40 -- 143.8 & 5 -- 379 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[h]
+    \centering
+    \caption{Bonferroni-adjusted $p$-values of pairwise Mann-Whitney U tests between vendors. The first two columns are adjusted for six comparisons, the last for three.}
+    \label{tab:pairwise}
+    \begin{tabular}{lrrr}
+        \toprule
+        Pair & Discovery & Reservation & Reservation, 2022 on \\
+        \midrule
+        Microsoft -- Google & $<0.001$ & $<0.001$ & $<0.001$ \\
+        Microsoft -- Apple  & 0.001 & $<0.001$ & 0.981 \\
+        Microsoft -- Adobe  & $<0.001$ & 0.284 & -- \\
+        Google -- Apple     & 0.027 & 0.245 & $<0.001$ \\
+        Google -- Adobe     & 1.000 & 0.447 & -- \\
+        Apple -- Adobe      & 0.116 & 1.000 & -- \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{figure}[h]
+    \centering
+    % \includegraphics[width=0.48\textwidth]{figures/latency_by_vendor.png}
+    % \includegraphics[width=0.48\textwidth]{figures/latency_by_vendor_reserved.png}
+    \caption{Patch latency per vendor: discovery-to-patch on a logarithmic scale (left) and reservation-to-patch on a linear scale (right).}
+    \label{fig:latency-by-vendor}
+\end{figure}
+
+\section{Patch Latency across Products (RQ3)}
+% -> Google, Chrome vs Android: differs under both measures
+%    discovery: Mann-Whitney U = 5, p < 0.001; reservation: Mann-Whitney U = 143, p < 0.001
+%    also holds for reservations from 2022 only (Chrome 1 vs Android 96.5 days, p < 0.001)
+% -> Microsoft, Windows vs Internet Explorer vs Office:
+%    discovery: Kruskal-Wallis H = 1.06, p = 0.588 (groups of 3, cannot detect a difference)
+%    reservation: Kruskal-Wallis H = 7.91, p = 0.019, driven by Windows vs Internet Explorer (adjusted p = 0.015)
+%    but the products come from different periods (median reservation year: Internet Explorer 2016, Office 2016, Windows 2022);
+%    restricted to reservations up to 2021: H = 0.99, p = 0.61 (medians: Internet Explorer 141, Office 120.5, Windows 124). No product difference.
+% -> Apple, iOS vs WebKit: reservation: Mann-Whitney U = 361, p = 0.49. No difference. Discovery set too small (8 and 2).
+% -> the hypothesis of a product difference within a vendor is supported for Google only
+
+\begin{table}[h]
+    \centering
+    \caption{Patch latency in days per product under both measures.}
+    \label{tab:products}
+    \small
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{llrrrrrr}
+        \toprule
+        & & \multicolumn{2}{c}{Discovery} & \multicolumn{4}{c}{Reservation} \\
+        \cmidrule(lr){3-4} \cmidrule(lr){5-8}
+        Vendor & Product & $n$ & Median & $n$ & Median & IQR & Range \\
+        \midrule
+        Microsoft & Windows           & 13 & 27 & 98 & 60 & 40 -- 131.5 & 5 -- 379 \\
+                  & Internet Explorer & 3 & 9 & 23 & 130 & 81 -- 212 & 11 -- 351 \\
+                  & Office            & 3 & 14 & 18 & 66 & 42 -- 162.8 & 27 -- 242 \\
+        \addlinespace
+        Google    & Chrome            & 47 & 4 & 61 & 3 & 0 -- 71 & 0 -- 153 \\
+                  & Android           & 6 & 116 & 18 & 115.5 & 76 -- 136.8 & 14 -- 426 \\
+        \addlinespace
+        Apple     & iOS               & 8 & 9.5 & 30 & 22 & 13.5 -- 101 & 4 -- 244 \\
+                  & WebKit            & 2 & 9.5 & 27 & 49 & 20 -- 77 & 5 -- 240 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{Patch Latency and Severity (RQ4)}
+% -> CVSS v3 base score found for all 410 CVEs; 313 are NVD's own assessment, 97 come from the vendor or CISA
+% -> Low has a single CVE and is left out of the tests
+% -> discovery: Kruskal-Wallis H = 30.87, p < 0.001; Spearman rho = -0.648, p < 0.001
+%    adjusted pairwise: Medium vs High p < 0.001; Medium vs Critical p < 0.001; High vs Critical p = 0.005
+% -> reservation: Kruskal-Wallis H = 9.33, p = 0.009; Spearman rho = -0.216, p < 0.001
+%    adjusted pairwise: Medium vs High p = 1.000; Medium vs Critical p = 0.033; High vs Critical p = 0.011
+% -> direction matches the hypothesis under both measures: higher severity, shorter latency. Strong on discovery dates, weak on reserved dates.
+% -> within vendors, discovery: Microsoft rho = -0.52 (p = 0.01, n = 25); Google rho = -0.52 (p < 0.001, n = 53); Apple rho = 0.19 (p = 0.59, n = 10); Adobe rho = 0.03 (p = 0.91, n = 14)
+% -> within vendors, reservation: Microsoft rho = -0.02 (p = 0.78, n = 166); Google rho = -0.40 (p < 0.001, n = 79); Apple rho = -0.11 (p = 0.39, n = 64); Adobe rho = -0.08 (p = 0.67, n = 28)
+% -> within Chrome alone, reservation: rho = -0.06, p = 0.64, n = 61 (the Google result reflects Chrome vs Android)
+% -> caveats: 305 of 410 CVEs are High and 262 have a score of 7.8 or 8.8, so the scale barely varies;
+%    bands are tied to vendors (discovery set: 8 of 21 Medium cases are Samsung, 20 of 25 Critical cases are Google or Adobe)
+
+\begin{table}[h]
+    \centering
+    \caption{Patch latency in days per CVSS v3 severity band under both measures.}
+    \label{tab:severity}
+    \small
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{lrrrrrrr}
+        \toprule
+        & & \multicolumn{3}{c}{Discovery} & \multicolumn{3}{c}{Reservation} \\
+        \cmidrule(lr){3-5} \cmidrule(lr){6-8}
+        Band & CVEs & $n$ & Median & IQR & $n$ & Median & IQR \\
+        \midrule
+        Low      & 1 & 1 & 78 & -- & 1 & 39 & -- \\
+        Medium   & 48 & 21 & 69 & 27 -- 121 & 47 & 60 & 40 -- 107 \\
+        High     & 305 & 85 & 9 & 4 -- 24 & 300 & 57 & 28 -- 123.2 \\
+        Critical & 56 & 25 & 4 & 3 -- 6 & 55 & 25 & 5.5 -- 85.5 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
